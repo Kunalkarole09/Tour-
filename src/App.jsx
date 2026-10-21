@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 const image = (id, width = 1200) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${width}&q=85`;
+const apiBaseUrl = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://localhost:8787" : "")).replace(/\/$/, "");
 
 const tours = [
   { id: "ladakh", place: "Ladakh, India", title: "The high road to Ladakh", duration: "9 days", price: "₹48,500", type: "Adventure", map: "https://www.google.com/maps/search/Ladakh", image: image("photo-1548013146-72479768bada"), intro: "A slow, soul-stirring crossing of high passes, ancient monasteries and moon-like valleys.", highlights: ["Khardung La sunrise", "Nubra Valley camp", "Pangong by starlight"], itinerary: ["Leh · Arrive & acclimatise", "Nubra · Cross Khardung La", "Diskit · Monastery & dunes", "Pangong · Blue hour by the lake", "Leh · Local life & farewell"] },
@@ -487,7 +488,7 @@ function Newsletter({ setToast }) {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("http://localhost:8787/api/newsletter", {
+      const res = await fetch(`${apiBaseUrl}/api/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -542,7 +543,7 @@ function TourModal({ tour, onClose, setToast }) {
     e.preventDefault();
     setBusy(true);
     try {
-      const res = await fetch("http://localhost:8787/api/enquiries", {
+      const res = await fetch(`${apiBaseUrl}/api/enquiries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, tour: tour.title })

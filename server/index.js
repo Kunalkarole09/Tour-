@@ -8,10 +8,12 @@ const port = process.env.PORT || 8787;
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(root, "data");
 const dataFile = path.join(dataDir, "submissions.json");
+const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const distDir = path.join(root, "..", "dist");
 
 app.use(express.json({ limit: "20kb" }));
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN || "http://localhost:5173");
+  res.header("Access-Control-Allow-Origin", clientOrigin);
   res.header("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
@@ -40,6 +42,16 @@ function requiredString(value, field) {
   return value.trim();
 }
 
+function requiredEmail(value) {
+  const email = requiredString(value, "Email");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const error = new Error("Please enter a valid email address");
+    error.status = 400;
+    throw error;
+  }
+  return email.toLowerCase();
+}
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 app.post("/api/enquiries", async (req, res, next) => {
@@ -48,7 +60,7 @@ app.post("/api/enquiries", async (req, res, next) => {
     const enquiry = {
       id: crypto.randomUUID(),
       name: requiredString(name, "Name"),
-      email: requiredString(email, "Email"),
+      email: requiredEmail(email),
       phone: typeof phone === "string" ? phone.trim() : "",
       tour: requiredString(tour, "Tour"),
       travellers: Number.isInteger(travellers) && travellers > 0 ? travellers : 1,
@@ -67,7 +79,7 @@ app.post("/api/enquiries", async (req, res, next) => {
 
 app.post("/api/newsletter", async (req, res, next) => {
   try {
-    const email = requiredString(req.body.email, "Email");
+    const email = requiredEmail(req.body.email);
     const data = await readSubmissions();
     if (!data.subscribers.some((subscriber) => subscriber.email === email)) {
       data.subscribers.push({ email, createdAt: new Date().toISOString() });
@@ -79,9 +91,15 @@ app.post("/api/newsletter", async (req, res, next) => {
   }
 });
 
+app.use(express.static(distDir, { extensions: ["html"] }));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api/")) return next();
+  res.sendFile(path.join(distDir, "index.html"), (error) => error && next(error));
+});
+
 app.use((error, _req, res, _next) => {
   console.error(error);
   res.status(error.status || 500).json({ message: error.status ? error.message : "Something went wrong. Please try again." });
 });
 
-app.listen(port, () => console.log(`Traviator API listening on http://localhost:${port}`));
+app.listen(port, () => console.log(`Traviator listening on port ${port}`));
